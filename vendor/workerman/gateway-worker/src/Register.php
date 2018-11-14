@@ -132,6 +132,7 @@ class Register extends Worker
                     return $connection->close();
                 }
                 $this->_gatewayConnections[$connection->id] = $data['address'];
+                //对business广播 gateway地址
                 $this->broadcastAddresses();
                 break;
             // 是 worker 连接

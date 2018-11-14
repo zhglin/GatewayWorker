@@ -12,7 +12,7 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 namespace GatewayWorker\Protocols;
-
+//http://www.phpdig.net/ref/rn45re877.html
 /**
  * Gateway 与 Worker 间通讯的二进制协议
  *

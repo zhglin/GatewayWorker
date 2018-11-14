@@ -189,6 +189,7 @@ class AsyncTcpConnection extends TcpConnection
                 STREAM_CLIENT_ASYNC_CONNECT);
         }
         // If failed attempt to emit onError callback.
+        // todo
         if (!$this->_socket) {
             $this->emitError(WORKERMAN_CONNECT_FAIL, $errstr);
             if ($this->_status === self::STATUS_CLOSING) {

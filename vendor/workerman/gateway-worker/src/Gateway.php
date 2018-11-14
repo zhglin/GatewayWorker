@@ -364,6 +364,15 @@ class Gateway extends Worker
             /** @var TcpConnection $worker_connection */
             $worker_connection = call_user_func($this->router, $this->_workerConnections, $connection, $cmd, $body);
             if (false === $worker_connection->send($gateway_data)) {
+                    /*
+                     * 这个错误日志说明businessWorker进程有长时间阻塞（卡住）的情况，无法接收gateway发送的消息，并导致消息发送缓冲区满。
+                     *  出现这种情况一般是由于业务代码导致，比如业务中有无限的while死循环，或者业务访问外部网络(mysql、curl等等)超时。
+                     *  出现这个问题时，通过运行 php start.php status 查看时会发现businessWorker进程统计全部消失或者部分消失的情况，
+                     *  原因就是由于业务卡住无法响应status命令。通过 ps aux 命令是能查看到businessWorker进程是存在的，
+                     *  根据ps aux的结果找出php start.php status消失进程pid，
+                     *  通过命令 strace -p 消失进程pid 可以跟踪进程系统调用，如果发现进程卡在某个资源读写相关的系统调用，
+                     *  可以配合 lsof -nPp 消失进程pid 查看是卡在哪个资源的读写上。进而发现问题。
+                     */
                 $msg = "SendBufferToWorker fail. May be the send buffer are overflow. See http://wiki.workerman.net/Error2 for detail";
                 $this->log($msg);
                 return false;
@@ -536,10 +545,10 @@ class Gateway extends Worker
                 // 在一台服务器上businessWorker->name不能相同
                 if (isset($this->_workerConnections[$key])) {
                     self::log("Gateway: Worker->name conflict. Key:{$key}");
-		    $connection->close();
+		            $connection->close();
                     return;
                 }
-		$connection->key = $key;
+		        $connection->key = $key;
                 $this->_workerConnections[$key] = $connection;
                 $connection->authorized = true;
                 return;
@@ -820,6 +829,7 @@ class Gateway extends Worker
     {
         $address                   = $this->lanIp . ':' . $this->lanPort;
         $this->_registerConnection = new AsyncTcpConnection("text://{$this->registerAddress}");
+        //AsyncTcpConnection 的$_status=STATUS_INITIAL 不会进行发送
         $this->_registerConnection->send('{"event":"gateway_connect", "address":"' . $address . '", "secret_key":"' . $this->secretKey . '"}');
         $this->_registerConnection->onClose = array($this, 'onRegisterConnectionClose');
         $this->_registerConnection->connect();
